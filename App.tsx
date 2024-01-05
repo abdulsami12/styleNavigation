@@ -1,118 +1,198 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
+import { BottomTabBarProps, BottomTabNavigationOptions, createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { NavigationContainer } from '@react-navigation/native';
+import { useReducer, useRef,useEffect } from 'react';
+import { StatusBar, View,Text ,StyleSheet, Pressable, LayoutChangeEvent} from 'react-native';
+import Animated, { useAnimatedStyle, useDerivedValue, withTiming } from 'react-native-reanimated';
+import {  useSafeAreaInsets } from 'react-native-safe-area-context';
+import  Svg ,{Path} from 'react-native-svg';
+import Lottie from "lottie-react-native"
 
-import React from 'react';
-import type {PropsWithChildren} from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+const Tab = createBottomTabNavigator();
+const AnimatedSvg = Animated.createAnimatedComponent(Svg)
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+export default function App(){
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
+  return(<>
+   <StatusBar barStyle="light-content" />
+   <NavigationContainer>
 
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+  <Tab.Navigator tabBar={(props)=> <AnimatedTabler {...props} />}>
+  <Tab.Screen name="Home"
+  options={{
+    tabBarIcon:({ref})=><Lottie ref={ref} loop={false} source={require("./LotiAnimation/Frame 2.json") } style={styles.icon} />
+  }}
+  component={PlaceholderScreen} />
+  <Tab.Screen name="Settings" component={PlaceholderScreen} />
+  <Tab.Screen name="profile" component={PlaceholderScreen} />
+  <Tab.Screen name="games" component={PlaceholderScreen} />
+  
+</Tab.Navigator>
+   </NavigationContainer>
+  
+  </>)
+}
+
+
+
+const PlaceholderScreen = () => {
   return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
+    <View style={{ flex: 1, backgroundColor: '#604AE6' }} />
+  )
+}
+
+
+
+const AnimatedTabler =({state:{index:activeIndex,routes},navigation,descriptors}:BottomTabBarProps)=>{
+  const {bottom}= useSafeAreaInsets()
+  console.log(bottom)
+ const reducer = (state:any,action:{x:number,index:number})=>{
+
+  return [...state,{x:action.x,index:action.index}]
+
+}
+  const [layout, dispatch] = useReducer(reducer,[])
+ console.log(layout)
+const handleLayout =(event:LayoutChangeEvent,index:number)=>{
+  dispatch({x:event.nativeEvent.layout.x,index})
+ 
+}
+
+//// animation 
+
+const xOffset = useDerivedValue(()=>{
+  if(layout.length !== routes.length) return 0;
+
+
+
+  return[...layout].find(({index})=> index === activeIndex)!.x - 25
+},[activeIndex,layout])
+
+
+const animatedSyles = useAnimatedStyle(()=>{
+return{
+  transform:[{translateX:withTiming(xOffset.value,{duration:250})}],
+}
+})
+
+  return(
+    <View style={[styles.tabBar,{paddingBottom:bottom}]}>
+ <AnimatedSvg width="110"
+      height="60"
+      fill="none"
+      viewBox="0 0 110 60" style={[styles.activeBackground,animatedSyles]}>
+    <Path
+      fill="#604AE6"
+      d="M20 0H0c11.046 0 20 8.954 20 20v5c0 19.33 15.67 35 35 35s35-15.67 35-35v-5c0-11.046 8.954-20 20-20H20z"
+    />
+  </AnimatedSvg> 
+
+  <View style={styles.tabBarContainer}>
+    {routes.map((route,index)=>{
+      const active = index == activeIndex
+      const {options} = descriptors[route.key]
+      return(
+  <TabBarComponent key={route.key} active={active} options={options} onLayout={(e)=>handleLayout(e,index)} onPress={()=>{navigation.navigate(route.name)}}/>
+      )
+    })
+
+    }
+
+  </View>
     </View>
-  );
+
+  )
 }
 
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
-  };
 
-  return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
+
+type TabBarComponentProps={
+  active?: boolean  
+  options:BottomTabNavigationOptions
+ onLayout:(e:LayoutChangeEvent)=>void
+  onPress:()=> void
 }
+
+const TabBarComponent=({active,options,onLayout,onPress}:TabBarComponentProps)=>{
+// handle lotties
+
+const ref = useRef(null)
+
+useEffect(() => {
+if(active && ref?.current){
+  ref.current.play()
+}
+
+}, [active])
+
+
+  // animation 
+const animatedComponentCircileStyles = useAnimatedStyle(()=>{
+  return{
+    transform:[
+      {
+        scale:withTiming(active?1: 0,{duration:250})
+      }
+    ]
+  }
+})
+
+const animatedIconContainerStyles = useAnimatedStyle(()=>{
+  return{
+    opacity:withTiming(active?1:0.5,{duration:250})
+  }
+})
+
+  return(
+    <Pressable onPress={onPress} onLayout={onLayout} style={styles.component}>
+<Animated.View style={[styles.componentCircle,animatedComponentCircileStyles]}/>
+<Animated.View style={[styles.iconContainer,animatedIconContainerStyles]}>
+{options.tabBarIcon ? options.tabBarIcon({ref}):<Text>?</Text>}
+</Animated.View>
+
+
+
+    </Pressable>
+  )
+}
+
+
+
+
+
 
 const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
+  tabBar: {
+    backgroundColor: 'white',
   },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
+  activeBackground: {
+    position: 'absolute',
   },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
+  tabBarContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
   },
-  highlight: {
-    fontWeight: '700',
+  component: {
+    height: 60,
+    width: 60,
+    marginTop: -5,
   },
-});
-
-export default App;
+  componentCircle: {
+    flex: 1,
+    borderRadius: 30,
+    backgroundColor: 'white',
+  },
+  iconContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  icon: {
+    height: 47,
+    width: 47,
+  }
+})
